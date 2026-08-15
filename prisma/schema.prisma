@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// SmartContract model represents a monitored smart contract
+model SmartContract {
+  id        Int      @id @default(autoincrement())
+  address   String
+  chain     String   // e.g., "ethereum", "polygon", "bsc", "arbitrum", "optimism"
+  name      String?
+  abi       String?  // JSON representation of the contract ABI
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  vulnerabilities Vulnerability[]
+  bountyPrograms  BountyProgram[]
+  anomalies       Anomaly[]
+  opportunities   Opportunity[]
+
+  @@unique([address, chain])
+  @@index([chain])
+}
+
+// Vulnerability model represents an identified vulnerability in a smart contract
+model Vulnerability {
+  id              Int      @id @default(autoincrement())
+  cve             String?  // CVE identifier if applicable
+  swcId           String   // SWC ID (e.g., "SWC-104", "SWC-136")
+  severity        String   // e.g., "low", "medium", "high", "critical"
+  title           String   // Human-readable title
+  description     String
+  discoveredAt    DateTime @default(now())
+  reportedAt      DateTime?
+
+  // Relationships
+  smartContract   SmartContract @relation(fields: [smartContractId], references: [id])
+  smartContractId Int
+
+  @@index([smartContractId])
+  @@index([severity])
+  @@index([swcId])
+}
+
+// BountyProgram model represents a bug bounty program (e.g., Immunefi)
+model BountyProgram {
+  id          Int      @id @default(autoincrement())
+  platform    String   // e.g., "Immunefi", "Hacken", "Bugcrowd"
+  protocol    String   // e.g., "Uniswap", "Aave", "Compound"
+  maxPayout   Float    // Maximum payout in USD
+  scope       String   // Scope of the program (e.g., "smart-contract", "protocol", "frontend")
+  title       String
+  description String
+  url         String?  // Link to the bounty program
+  status      String   @default("active") // active, paused, retired
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  smartContracts SmartContract[]
+  opportunities  Opportunity[]
+
+  @@unique([platform, protocol])
+  @@index([platform])
+  @@index([status])
+}
+
+// Opportunity model represents a specific bug bounty opportunity/finding
+model Opportunity {
+  id              Int      @id @default(autoincrement())
+  title           String
+  description     String
+  severity        String   // e.g., "low", "medium", "high", "critical"
+  status          String   @default("pending") // pending, confirmed, rejected, paid
+  payout          Float?   // Actual payout amount in USD
+  payoutToken     String?  // Token symbol if paid in tokens (e.g., "USDC", "ETH")
+  payoutTxHash    String?  // Transaction hash of payout
+  reporter        String?  // Address or username of reporter
+  reportedAt      DateTime @default(now())
+  resolvedAt      DateTime?
+
+  // Relationships
+  bountyProgram   BountyProgram @relation(fields: [bountyProgramId], references: [id])
+  bountyProgramId Int
+  smartContract   SmartContract @relation(fields: [smartContractId], references: [id])
+  smartContractId Int
+
+  @@index([bountyProgramId])
+  @@index([smartContractId])
+  @@index([severity])
+  @@index([status])
+}
+
+// Anomaly model represents on-chain anomalies detected for a smart contract
+model Anomaly {
+  id              Int      @id @default(autoincrement())
+  type            String   // e.g., "large-transfer", "unusual-call-pattern", "balance-drain", "new-contract-deployment"
+  severity        String   // e.g., "low", "medium", "high", "critical"
+  title           String
+  description     String
+  blockNumber     BigInt
+  transactionHash String   @unique
+  logIndex        Int?
+  detectedAt      DateTime @default(now())
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  metadata        Json?    // Additional context (addresses, values, etc.)
+
+  // Relationships
+  smartContract   SmartContract @relation(fields: [smartContractId], references: [id])
+  smartContractId Int
+
+  @@index([smartContractId])
+  @@index([type])
+  @@index([severity])
+  @@index([detectedAt])
+  @@index([blockNumber])
+}
