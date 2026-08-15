@@ -1,7 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-export default function MatrixRain() {
+interface MatrixRainProps {
+  className?: string;
+}
+
+export default function MatrixRain({ className }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -45,5 +49,5 @@ export default function MatrixRain() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 z-0 opacity-[0.06] pointer-events-none" />;
+  return <canvas ref={canvasRef} className={className} />;
 }
