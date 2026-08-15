@@ -1,26 +1,316 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050507;
+  --foreground: #e5e5e5;
+  --primary: #00ff9c;
+  --primary-foreground: #000000;
+  --secondary: #ff9a00;
+  --secondary-foreground: #000000;
+  --accent: #ff00ff;
+  --accent-foreground: #ffffff;
+  --border: #00ff9c;
+  --input: #00ff9c;
+  --ring: #00ff9c;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background-image:
+    linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center center;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Cyberpunk grid background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at center,
+    transparent 40%,
+    rgba(0, 240, 255, 0.02) 70%,
+    rgba(0, 240, 255, 0.01) 85%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Scanlines */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 240, 255, 0.01) 50%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  background-size: 100% 4px;
+  animation: scanline 8s linear infinite;
+  opacity: 0.3;
+  z-index: 50;
+  pointer-events: none;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* HUD card styling */
+.hud-card {
+  background-color: rgba(10, 12, 16, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% 100%,
+    16px 100%,
+    0 calc(100% - 16px)
+  );
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+}
+
+/* Neon text utilities */
+.neon-cyan {
+  color: #00ff9c;
+  text-shadow: 0 0 10px rgba(0, 255, 156, 0.8),
+               0 0 20px rgba(0, 255, 156, 0.5),
+               0 0 30px rgba(0, 255, 156, 0.3);
+}
+
+.neon-green {
+  color: #00ff9c;
+  text-shadow: 0 0 10px rgba(0, 255, 156, 0.8),
+               0 0 20px rgba(0, 255, 156, 0.5),
+               0 0 30px rgba(0, 255, 156, 0.3);
+}
+
+.neon-pink {
+  color: #ff00ff;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.8),
+               0 0 20px rgba(255, 0, 255, 0.5),
+               0 0 30px rgba(255, 0, 255, 0.3);
+}
+
+.neon-yellow {
+  color: #ffe74c;
+  text-shadow: 0 0 10px rgba(255, 231, 76, 0.8),
+               0 0 20px rgba(255, 231, 76, 0.5),
+               0 0 30px rgba(255, 231, 76, 0.3);
+}
+
+/* Glitch animations */
+@keyframes glitch-1 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { transform: translate(0); }
+  25% { transform: translate(2px, -1px); }
+  50% { transform: translate(-2px, 1px); }
+  75% { transform: translate(1px, -2px); }
+}
+
+.glitch {
+  position: relative;
+  display: inline-block;
+  font-weight: 700;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  left: 2px;
+  text-shadow: -1px 0 #ff00c1;
+  clip-path: polygon(0 0, 100% 20%, 100% 80%, 0 100%);
+  animation: glitch-1 0.3s infinite;
+  opacity: 0.8;
+}
+
+.glitch::after {
+  left: -2px;
+  text-shadow: 1px 0 #00fff9;
+  clip-path: polygon(0 20%, 100% 40%, 100% 60%, 0 80%);
+  animation: glitch-2 0.3s infinite reverse;
+  opacity: 0.8;
+}
+
+/* Pulse glow effect */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.8; text-shadow: 0 0 10px currentColor; }
+  50% { opacity: 1; text-shadow: 0 0 30px currentColor, 0 0 50px currentColor; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Scanline drop effect */
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 255, 156, 0.03),
+    transparent
+  );
+  animation: scan 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00ff9c;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff9c;
+}
+
+/* Additional cyberpunk styles from request */
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+body {
+  background: #050507;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 3px);
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.3;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  animation: scan 7s linear infinite;
+  pointer-events: none;
+  z-index: 49;
+}
+
+.neon-cyan { text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.4); color: #00f0ff; }
+.neon-green { text-shadow: 0 0 10px rgba(0, 255, 156, 0.8), 0 0 20px rgba(0, 255, 156, 0.4); color: #00ff9c; }
+.neon-pink { text-shadow: 0 0 10px rgba(255, 46, 95, 0.8); color: #ff2e5f; }
+.neon-yellow { text-shadow: 0 0 10px rgba(255, 231, 76, 0.8); color: #ffe74c; }
+
+.hud-card {
+  background: rgba(10, 12, 16, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  padding: 1.5rem;
+}
+
+.glitch-title {
+  position: relative;
+  animation: glitch 5s infinite;
+}
+.glitch-title::before,
+.glitch-title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.glitch-title::before {
+  animation: glitch 3s infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+  transform: translate(-2px);
+  opacity: 0.8;
+}
+.glitch-title::after {
+  animation: glitch 4s infinite;
+  clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+  transform: translate(2px);
+  opacity: 0.8;
 }
