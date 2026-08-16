@@ -16,6 +16,12 @@ async function getStats() {
     take: 50,
   });
 
+  const bountyPrograms = await prisma.bountyProgram.findMany({
+    where: { status: 'active' },
+    orderBy: { maxPayout: 'desc' },
+    take: 10,
+  });
+
   const now = new Date();
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
@@ -28,7 +34,7 @@ async function getStats() {
     ? Math.max(...anomalies.map((a) => Number(a.blockNumber ?? 0)))
     : '-';
 
-  return { anomalies, stats: { totalAnomalies, last24h: last24hCount, uniqueContracts, lastBlock } };
+  return { anomalies, bountyPrograms, stats: { totalAnomalies, last24h: last24hCount, uniqueContracts, lastBlock } };
 }
 
 // Helper for relative time formatting
@@ -51,7 +57,7 @@ const severityStyles: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const { anomalies, stats } = await getStats();
+  const { anomalies, bountyPrograms, stats } = await getStats();
 
   return (
     <main className="bg-zinc-950 min-h-screen text-zinc-100 font-mono overflow-x-auto">
@@ -181,6 +187,58 @@ export default async function HomePage() {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Active Bounties Section */}
+      <section className="p-6">
+        <h2 className="text-zinc-300 text-lg font-semibold mb-4">// ACTIVE BOUNTIES</h2>
+        {bountyPrograms.length === 0 ? (
+          <p className="text-zinc-500 text-center py-12">No active bounty programs yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-800 text-[10px] uppercase tracking-[0.2em] text-cyan-400/60">
+                  <th className="py-3 px-3">PROTOCOL</th>
+                  <th className="py-3 px-3">MAX PAYOUT</th>
+                  <th className="py-3 px-3">SCOPE</th>
+                  <th className="py-3 px-3">LINK</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bountyPrograms.map((program) => (
+                  <tr
+                    key={program.id}
+                    className="border-b border-zinc-800 hover:bg-cyan-400/5 hover:translate-x-1 transition"
+                  >
+                    <td className="py-3 px-3 text-zinc-100 font-medium">{program.protocol}</td>
+                    <td className="py-3 px-3">
+                      <span className="neon-yellow font-mono">
+                        {program.maxPayout >= 1000000
+                          ? `$${(program.maxPayout / 1000000).toFixed(1)}M`
+                          : program.maxPayout >= 1000
+                          ? `$${(program.maxPayout / 1000).toFixed(0)}K`
+                          : `$${program.maxPayout}`
+                        }
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-zinc-400 text-sm">{program.scope}</td>
+                    <td className="py-3 px-3">
+                      <a
+                        href={program.url || 'https://immunefi.com/explore/'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="neon-cyan hover:text-cyan-300 transition-colors"
+                      >
+                        VIEW →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
