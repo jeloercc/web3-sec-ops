@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import Link from 'next/link';
 import CountUp from '@/components/CountUp';
 import LiveClock from '@/components/LiveClock';
 import GlitchTitle from '@/components/GlitchTitle';
@@ -48,6 +49,18 @@ const formatRelativeTime = (date: Date) => {
   if (diffDays < 30) return `${diffDays}d ago`;
   return `${Math.floor(diffDays / 30)}mo ago`;
 };
+
+/**
+ * Normaliza la lectura de gas desde metadata.
+ * Acepta claves viejas y nuevas, ratio (0-1) o porcentaje (0-100).
+ */
+function extractGas(metadata: unknown): number | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const m = metadata as Record<string, unknown>;
+  const raw = m.gasUsedPercent ?? m.gasUsageRatio ?? m.gasPercent ?? m.gasUsedPercentage;
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
+  return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+}
 
 const severityStyles: Record<string, string> = {
   critical: 'bg-red-500 text-white border-red-400/30',
@@ -112,6 +125,7 @@ export default async function HomePage() {
                   <th className="py-3 px-3">CONTRACT</th>
                   <th className="py-3 px-3">GAS BURNED</th>
                   <th className="py-3 px-3">DETECTED</th>
+                  <th className="py-3 px-3">DETAIL</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,15 +135,15 @@ export default async function HomePage() {
                   const severityClass = severityStyles[severity] || 'bg-zinc-500 text-white';
 
                   // Gas burned from metadata
-                  const metadata = anomaly.metadata as
-                    | { gasUsageRatio?: number }
-                    | undefined;
-                  const gasRatio = metadata?.gasUsageRatio
-                    ? Math.round(metadata.gasUsageRatio * 100)
-                    : null;
-                  const gasBurned = gasRatio !== null ? (
-                    <div className="h-6 w-60 bg-gradient-to-r from-green-500 to-red-500 rounded-lg overflow-hidden">
-                      <div className="h-full w-full bg-green-500 transition-all duration-500" style={{ width: `${gasRatio}%` }} />
+                  const gas = extractGas(anomaly.metadata);
+                  const gasBurned = gas !== null ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-48 bg-gradient-to-r from-green-500 to-red-500 rounded-lg overflow-hidden">
+                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${gas ?? 0}%` }} />
+                      </div>
+                      <span className="text-xs text-zinc-400 whitespace-nowrap">
+                        {gas !== null ? `${gas}%` : "—"}
+                      </span>
                     </div>
                   ) : (
                     <span className="text-zinc-400">—</span>
@@ -183,6 +197,14 @@ export default async function HomePage() {
                         <span title={anomaly.detectedAt?.toISOString() ?? ''} className="ml-2 text-xs opacity-60">
                           at <LocalTime iso={anomaly.detectedAt?.toISOString() ?? ''} />
                         </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <Link
+                          href={`/anomaly/${anomaly.id}`}
+                          className="neon-cyan hover:text-cyan-300 transition-colors"
+                        >
+                          →
+                        </Link>
                       </td>
                     </tr>
                   );
