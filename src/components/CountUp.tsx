@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 interface CountUpProps {
   target: number;
   duration?: number;
+  className?: string;
 }
 
-export default function CountUp({ target, duration = 1200 }: CountUpProps) {
+export default function CountUp({ target, duration = 1200, className }: CountUpProps) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     const start = Date.now();
@@ -18,5 +19,5 @@ export default function CountUp({ target, duration = 1200 }: CountUpProps) {
     };
     requestAnimationFrame(animate);
   }, [target, duration]);
-  return <>{count.toLocaleString()}</>;
+  return <span className={className}>{count.toLocaleString()}</span>;
 }

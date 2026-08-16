@@ -5,7 +5,7 @@ import { mainnet } from 'viem/chains';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 const transport = fallback([
@@ -65,7 +65,7 @@ export const etherscanMonitor = schedules.task({
             for (const receipt of receipts) {
               receiptMap.set(receipt.transactionHash, {
                 status: receipt.status,
-                gasUsed: receipt.gasUsed,
+                gasUsed: receipt.gasUsed.toString(),
                 logs: receipt.logs ?? [],
               });
             }
