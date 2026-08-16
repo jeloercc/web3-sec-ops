@@ -82,12 +82,14 @@ export const etherscanMonitor = schedules.task({
                 const gasLimit = Number(tx.gas);
 
                 if (receipt.status === 'reverted' && Number(receipt.gasUsed) >= 0.6 * Number(tx.gas)) {
-                  const gasUsageRatio = gasUsed / gasLimit;
+                  // FEATURE 1: DYNAMIC SEVERITY
+                  const gasPercent = Math.round((gasUsed / gasLimit) * 10000) / 100;
+                  let severity = "MEDIUM";
+                  if (gasPercent >= 95) severity = "CRITICAL";
+                  else if (gasPercent >= 80) severity = "HIGH";
 
                   logger.info(
-                    `Anomaly detected: Failed tx ${tx.hash?.slice(0, 10)}... in block ${blockNum} - gas usage: ${(
-                      gasUsageRatio * 100
-                    ).toFixed(2)}%`,
+                    `Anomaly detected: Failed tx ${tx.hash?.slice(0, 10)}... in block ${blockNum} - gas usage: ${gasPercent.toFixed(2)}%`,
                   );
 
                   // Upsert SmartContract before creating Anomaly
@@ -113,11 +115,9 @@ export const etherscanMonitor = schedules.task({
                   await prisma.anomaly.create({
                     data: {
                       type: 'failed-high-gas-transaction',
-                      severity: 'critical',
-                      title: `Failed transaction with high gas consumption (${(gasUsageRatio * 100).toFixed(1)}%)`,
-                      description: `Transaction ${tx.hash} failed (status 0) and consumed ${(
-                        gasUsageRatio * 100
-                      ).toFixed(2)}% of its gas limit (${gasUsed}/${gasLimit}). This may indicate an exploit attempt or critical error.`,
+                      severity: severity,
+                      title: `Failed transaction with high gas consumption (${gasPercent.toFixed(1)}%)`,
+                      description: `Transaction ${tx.hash} failed (status 0) and consumed ${gasPercent.toFixed(2)}% of its gas limit (${gasUsed}/${gasLimit}). This may indicate an exploit attempt or critical error.`,
                       blockNumber: blockNum,
                       transactionHash: tx.hash!,
                       logIndex: receipt.logs ? receipt.logs.length : 0,
@@ -129,7 +129,7 @@ export const etherscanMonitor = schedules.task({
                       metadata: {
                         gasUsed: gasUsed.toString(),
                         gasLimit: gasLimit.toString(),
-                        gasUsageRatio: gasUsageRatio,
+                        gasUsedPercent: gasPercent,
                         from: tx.from,
                         to: tx.to,
                         input: tx.input,
@@ -138,6 +138,30 @@ export const etherscanMonitor = schedules.task({
                   });
 
                   totalAnomalies++;
+
+                  // FEATURE 2: TELEGRAM ALERT (solo CRITICAL o HIGH)
+                  const token = process.env.TELEGRAM_BOT_TOKEN;
+                  const chatId = process.env.TELEGRAM_CHAT_ID;
+                  if (token && chatId && (severity === "CRITICAL" || severity === "HIGH")) {
+                    try {
+                      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          chat_id: chatId,
+                          text: [
+                            `🚨 ${severity} ANOMALY DETECTED`,
+                            `⛓ Block: ${blockNum}`,
+                            `📉 Gas burned: ${gasPercent}%`,
+                            `📄 Tx: https://etherscan.io/tx/${tx.hash}`,
+                            `🏠 Contract: https://etherscan.io/address/${contractAddress}`,
+                          ].join("\n"),
+                        }),
+                      });
+                    } catch (e) {
+                      logger.warn("Telegram alert failed", { error: String(e) });
+                    }
+                  }
                 }
               } catch (error: unknown) {
                 const errorMessage =
