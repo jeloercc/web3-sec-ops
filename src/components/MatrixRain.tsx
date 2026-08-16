@@ -5,7 +5,7 @@ interface MatrixRainProps {
   className?: string;
 }
 
-export default function MatrixRain({ className }: MatrixRainProps) {
+export default function MatrixRain({ className = "fixed inset-0 z-0 opacity-[0.06] pointer-events-none" }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

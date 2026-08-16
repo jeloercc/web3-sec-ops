@@ -3,8 +3,10 @@ import CountUp from '@/components/CountUp';
 import LiveClock from '@/components/LiveClock';
 import GlitchTitle from '@/components/GlitchTitle';
 import MatrixRain from '@/components/MatrixRain';
+import AutoRefresh from '@/components/AutoRefresh';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function getStats() {
   const anomalies = await prisma.anomaly.findMany({
@@ -54,7 +56,7 @@ export default async function HomePage() {
     <main className="bg-zinc-950 min-h-screen text-zinc-100 font-mono overflow-x-auto">
       {/* Header with MatrixRain background */}
       <header className="border-b border-zinc-800 bg-zinc-900/50 px-6 py-4 relative">
-        <MatrixRain className="absolute inset-0 pointer-events-none z-0" />
+        <MatrixRain />
         <div className="flex items-center justify-between">
           <GlitchTitle text="WEB3 SEC-OPS // ON-CHAIN THREAT INTELLIGENCE" />
           <div className="flex items-center gap-2">
@@ -63,6 +65,8 @@ export default async function HomePage() {
           </div>
         </div>
       </header>
+
+        <AutoRefresh />
 
       {/* Stats Cards */}
       <section className="p-6">
