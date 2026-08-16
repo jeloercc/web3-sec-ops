@@ -4,6 +4,7 @@ import LiveClock from '@/components/LiveClock';
 import GlitchTitle from '@/components/GlitchTitle';
 import MatrixRain from '@/components/MatrixRain';
 import AutoRefresh from '@/components/AutoRefresh';
+import LocalTime from '@/components/LocalTime';
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -33,13 +34,13 @@ async function getStats() {
 // Helper for relative time formatting
 const formatRelativeTime = (date: Date) => {
   const diffMinutes = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 60));
-  if (diffMinutes < 1) return 'hace <1m';
-  if (diffMinutes < 60) return `hace ${diffMinutes}m`;
+  if (diffMinutes < 1) return '<1m ago';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `hace ${diffHours}h`;
+  if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `hace ${diffDays}d`;
-  return `hace ${Math.floor(diffDays / 30)}mes`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
 };
 
 const severityStyles: Record<string, string> = {
@@ -174,7 +175,7 @@ export default async function HomePage() {
                       <td className="py-3 px-3 text-zinc-400 text-sm font-mono">
                         {relativeTime}
                         <span title={anomaly.detectedAt?.toISOString() ?? ''} className="ml-2 text-xs opacity-60">
-                          at {new Date(anomaly.detectedAt?.getTime() ?? 0).toLocaleTimeString()}
+                          at <LocalTime iso={anomaly.detectedAt?.toISOString() ?? ''} />
                         </span>
                       </td>
                     </tr>
