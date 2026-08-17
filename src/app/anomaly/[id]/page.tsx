@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { extractGas } from '@/lib/metadata-utils';
 import MatrixRain from '@/components/MatrixRain';
 import LocalTime from '@/components/LocalTime';
 
@@ -31,22 +32,20 @@ export default async function AnomalyPage({
   const severity = anomaly.severity as 'low' | 'medium' | 'high' | 'critical';
   const severityClass = severityStyles[severity] || 'bg-zinc-500 text-white';
 
-  // Gas burned from metadata — same cast as page.tsx
-  const metadata = anomaly.metadata as { gasUsageRatio?: number } | undefined;
-  const gasRatio = metadata?.gasUsageRatio ? Math.round(metadata.gasUsageRatio * 100) : null;
-
-  const gasBurnedBar = gasRatio !== null ? (
-    <div className="h-10 w-full max-w-3xl bg-gradient-to-r from-green-500 to-red-500 rounded-lg overflow-hidden">
+  const gas = extractGas(anomaly.metadata);
+  const gasPercentDisplay = gas !== null ? `${gas}%` : "—";
+  const gasBurnedBar = gas !== null ? (
+    <div className="h-10 w-full bg-zinc-800 rounded-lg overflow-hidden">
       <div
-        className="h-full bg-green-500 transition-all duration-500"
-        style={{ width: `${gasRatio}%` }}
+        className="h-full bg-gradient-to-r from-green-500 to-red-500"
+        style={{ width: `${gas}%` }}
       />
     </div>
   ) : (
     <span className="text-zinc-400">—</span>
   );
 
-  const metadataJson = metadata ? JSON.stringify(metadata, null, 2) : 'null';
+  const metadataJson = anomaly.metadata ? JSON.stringify(anomaly.metadata, null, 2) : 'null';
 
   const contractAddress = anomaly.smartContract?.address ?? '-';
   const contractLink = anomaly.smartContract?.address
@@ -125,10 +124,7 @@ export default async function AnomalyPage({
           {/* GAS BURNED */}
           <div className="mb-6">
             <div className="text-cyan-400/60 text-[10px] uppercase tracking-widest mb-2">
-              GAS BURNED
-              {gasRatio !== null && (
-                <span className="text-zinc-400 ml-2">({gasRatio}%)</span>
-              )}
+              GAS BURNED <span className="text-zinc-400 ml-2">{gasPercentDisplay}</span>
             </div>
             {gasBurnedBar}
           </div>

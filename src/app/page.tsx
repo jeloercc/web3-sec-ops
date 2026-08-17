@@ -6,6 +6,8 @@ import GlitchTitle from '@/components/GlitchTitle';
 import MatrixRain from '@/components/MatrixRain';
 import AutoRefresh from '@/components/AutoRefresh';
 import LocalTime from '@/components/LocalTime';
+import { extractGas } from '@/lib/metadata-utils';
+import { Sparkline } from '@/components/Sparkline';
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,7 +37,25 @@ async function getStats() {
     ? Math.max(...anomalies.map((a) => Number(a.blockNumber ?? 0)))
     : '-';
 
-  return { anomalies, bountyPrograms, stats: { totalAnomalies, last24h: last24hCount, uniqueContracts, lastBlock } };
+  // Calculate daily anomaly counts for last 7 days
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recent = await prisma.anomaly.findMany({
+    where: { detectedAt: { gte: since } },
+    select: { detectedAt: true },
+  });
+
+  const dailyCounts: number[] = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const count = recent.filter((a) => new Date(a.detectedAt).toISOString().split('T')[0] === key).length;
+    dailyCounts.push(count);
+  }
+  const todayCount = dailyCounts[dailyCounts.length - 1];
+
+  return { anomalies, bountyPrograms, stats: { totalAnomalies, last24h: last24hCount, uniqueContracts, lastBlock, dailyCounts, todayCount } };
 }
 
 // Helper for relative time formatting
@@ -49,18 +69,6 @@ const formatRelativeTime = (date: Date) => {
   if (diffDays < 30) return `${diffDays}d ago`;
   return `${Math.floor(diffDays / 30)}mo ago`;
 };
-
-/**
- * Normaliza la lectura de gas desde metadata.
- * Acepta claves viejas y nuevas, ratio (0-1) o porcentaje (0-100).
- */
-function extractGas(metadata: unknown): number | null {
-  if (!metadata || typeof metadata !== "object") return null;
-  const m = metadata as Record<string, unknown>;
-  const raw = m.gasUsedPercent ?? m.gasUsageRatio ?? m.gasPercent ?? m.gasUsedPercentage;
-  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
-  return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
-}
 
 const severityStyles: Record<string, string> = {
   critical: 'bg-red-500 text-white border-red-400/30',
@@ -106,6 +114,19 @@ export default async function HomePage() {
             <div className="text-zinc-500 text-xs uppercase tracking-widest">CONTRACTS TRACKED</div>
             <CountUp target={stats.uniqueContracts} duration={1200} className="text-4xl font-bold neon-green" />
           </div>
+        </div>
+      </section>
+
+      {/* Activity — Last 7 Days Sparkline (always visible) */}
+      <section className="p-6">
+        <div className="hud-card p-6 mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[10px] uppercase tracking-[0.2em] text-cyan-400/60">
+              // ACTIVITY — LAST 7 DAYS
+            </h2>
+            <span className="text-xs neon-cyan">{stats.todayCount} today</span>
+          </div>
+          <Sparkline data={stats.dailyCounts} />
         </div>
       </section>
 
