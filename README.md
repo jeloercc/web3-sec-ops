@@ -15,6 +15,7 @@ These events correlate with failed attack attempts — reentrancy guards trippin
 
 The pipeline combines this signal with a synced view of active smart contract bug bounty programs, turning raw on-chain data into a prioritized investigation queue for manual vulnerability analysis.
 
+<img width="1190" height="803" alt="Screenshot 2026-08-21 at 10 27 09 PM" src="https://github.com/user-attachments/assets/f0c414c0-c0a0-437a-ba03-125f522e67ee" />
 ---
 
 ## Architecture
