@@ -1,11 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
 
 export default function LocalTime({ iso }: { iso: string }) {
-  const [formatted, setFormatted] = useState('');
-  useEffect(() => {
-    setFormatted(
-      new Date(iso).toLocaleString('en-US', {
+  const formatted = iso
+    ? new Date(iso).toLocaleString('en-US', {
         month: 'short',
         day: '2-digit',
         hour: 'numeric',
@@ -13,7 +10,6 @@ export default function LocalTime({ iso }: { iso: string }) {
         second: '2-digit',
         hour12: true,
       })
-    );
-  }, [iso]);
-  return <>{formatted || '—'}</>;
+    : '—';
+  return <>{formatted}</>;
 }

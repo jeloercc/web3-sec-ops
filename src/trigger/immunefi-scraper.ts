@@ -1,10 +1,18 @@
-import { task, logger } from '@trigger.dev/sdk/v3';
+import { logger } from '@trigger.dev/sdk/v3';
 import { schedules } from '@trigger.dev/sdk/v3';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
+
+interface ImmunefiProgram {
+  name?: string;
+  slug?: string;
+  maxPayout?: number | string;
+  url?: string;
+  status?: string;
+}
 
 // Bootstrap seed data for Immunefi programs (publicly known)
 const bootstrapPrograms = [
@@ -20,9 +28,8 @@ const bootstrapPrograms = [
 
 export const immunefiScraper = schedules.task({
   id: 'immunefi-scraper',
-  // Run daily at 8am UTC
   cron: '0 8 * * *',
-  run: async (_, { ctx }) => {
+  run: async () => {
     logger.info('Starting Immunefi scraper...');
 
     let programs: Array<{ protocol: string; maxPayout: number; url: string; status: string }> = [];
@@ -58,7 +65,7 @@ export const immunefiScraper = schedules.task({
       // Extract programs from the response (adjust based on actual structure)
       // Assuming the response has data.programs array
       if (data && data.programs && Array.isArray(data.programs)) {
-        programs = data.programs.map((p: any) => ({
+        programs = data.programs.map((p: ImmunefiProgram) => ({
           protocol: p.name || p.slug || 'Unknown',
           maxPayout: Number(p.maxPayout) || 0,
           url: p.url || 'https://immunefi.com/explore/',

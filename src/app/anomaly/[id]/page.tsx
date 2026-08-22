@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { extractGas } from '@/lib/metadata-utils';
 import MatrixRain from '@/components/MatrixRain';
@@ -62,12 +63,12 @@ export default async function AnomalyPage({
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/50 px-6 py-4 relative">
         <div className="flex items-center justify-between">
-          <a
+          <Link
             href="/"
             className="neon-cyan hover:text-cyan-300 transition-colors font-mono text-sm"
           >
             ← BACK TO DASHBOARD
-          </a>
+          </Link>
         </div>
       </header>
 

@@ -122,7 +122,7 @@ export default async function HomePage() {
         <div className="hud-card p-6 mb-12">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[10px] uppercase tracking-[0.2em] text-cyan-400/60">
-              // ACTIVITY — LAST 7 DAYS
+              {/* ACTIVITY — LAST 7 DAYS */}
             </h2>
             <span className="text-xs neon-cyan">{stats.todayCount} today</span>
           </div>
@@ -132,7 +132,7 @@ export default async function HomePage() {
 
       {/* Anomalies Table */}
       <section className="p-6">
-        <h2 className="text-zinc-300 text-lg font-semibold mb-4">// RECENT ANOMALIES</h2>
+        <h2 className="text-zinc-300 text-lg font-semibold mb-4">{/* RECENT ANOMALIES */}</h2>
         {anomalies.length === 0 ? (
           <p className="text-zinc-500 text-center py-12">No anomalies detected yet</p>
         ) : (
@@ -238,7 +238,7 @@ export default async function HomePage() {
 
       {/* Active Bounties Section */}
       <section className="p-6">
-        <h2 className="text-zinc-300 text-lg font-semibold mb-4">// ACTIVE BOUNTIES</h2>
+        <h2 className="text-zinc-300 text-lg font-semibold mb-4">{/* ACTIVE BOUNTIES */}</h2>
         {bountyPrograms.length === 0 ? (
           <p className="text-zinc-500 text-center py-12">No active bounty programs yet</p>
         ) : (
@@ -290,7 +290,7 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="p-6 border-t border-zinc-800 bg-zinc-900/50 text-[10px] text-zinc-500">
-        SCANNING ETHEREUM MAINNET // LAST BLOCK: {stats.lastBlock} // UPLINK: ALCHEMY
+        SCANNING ETHEREUM MAINNET \u00A0|\u00A0 LAST BLOCK: {stats.lastBlock} \u00A0|\u00A0 UPLINK: ALCHEMY
         <span className="animate-pulse ml-2">▮</span>
       </footer>
     </main>

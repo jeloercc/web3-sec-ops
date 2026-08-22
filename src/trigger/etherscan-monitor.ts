@@ -1,6 +1,6 @@
-import { task, logger } from '@trigger.dev/sdk/v3';
+import { logger } from '@trigger.dev/sdk/v3';
 import { schedules } from '@trigger.dev/sdk/v3';
-import { createPublicClient, fallback, http, type Chain } from 'viem';
+import { createPublicClient, fallback, http } from 'viem';
 import { mainnet } from 'viem/chains';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
@@ -25,9 +25,8 @@ const client = createPublicClient({ chain: mainnet, transport });
  */
 export const etherscanMonitor = schedules.task({
   id: 'etherscan-monitor',
-  // Run every hour
   cron: '0 * * * *',
-  run: async (_, { ctx }) => {
+  run: async () => {
     logger.info('Starting Ethereum Mainnet block monitoring...');
 
     const blockCount = 50;
