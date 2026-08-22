@@ -1,141 +1,141 @@
 # web3-sec-ops
 
-**Pipeline de inteligencia de amenazas on-chain para Ethereum mainnet.**  
-Detección autónoma de comportamiento transaccional anómalo, seguimiento de programas de bug bounty y alertas en tiempo real — todo desplegado como sistema serverless.
+**On-chain threat intelligence pipeline for Ethereum mainnet.**
+Autonomous detection of anomalous transaction behavior, bug bounty program tracking, and real-time alerting — all deployed as a serverless system.
 
-[Dashboard en vivo](https://web3-sec-ops.vercel.app) · [Metodología](#metodología-de-detección) · [Arquitectura](#arquitectura) · [Despliegue](#despliegue-rápido)
-
----
-
-## ¿Qué hace este proyecto?
-
-web3-sec-ops monitoriza Ethereum mainnet buscando señales a nivel de transacción que son consistentes con actividad de explotación: **transacciones revertidas que consumen una porción desproporcionada de su gas limit**.
-
-Estos eventos correlacionan con intentos de ataque fallidos — guards de reentrancy que saltan a mitad de ejecución, bucles de ataque que se agotan, o llamadas a contratos drenados/pausados.
-
-El pipeline combina esta señal con una vista sincronizada de programas activos de bug bounty en smart contracts, convirtiendo datos crudos de la cadena en una cola de investigación priorizada para análisis manual de vulnerabilidades.
+[Live dashboard](https://web3-sec-ops.vercel.app) · [Methodology](#detection-methodology) · [Architecture](#architecture) · [Quick deploy](#quick-deploy)
 
 ---
 
-## Arquitectura
+## What does this project do?
+
+web3-sec-ops monitors Ethereum mainnet for transaction-level signals consistent with exploitation activity: **reverted transactions that consume a disproportionate share of their gas limit**.
+
+These events correlate with failed attack attempts — reentrancy guards tripping mid-execution, attack loops running out of gas, or calls to drained/paused target contracts.
+
+The pipeline combines this signal with a synced view of active smart contract bug bounty programs, turning raw on-chain data into a prioritized investigation queue for manual vulnerability analysis.
+
+---
+
+## Architecture
 
 ```
 Ethereum mainnet (viem / Alchemy RPC)
-             │  ventana horaria (50 bloques)
+             │  hourly window (50 blocks)
              ▼
 ┌────────────────────────────────────┐
-│  etherscan-monitor (cron hourly)   │  filtro revert + gas-ratio
+│  etherscan-monitor (cron hourly)   │  revert + gas-ratio filter
 │  severity scoring                  │  CRITICAL ≥95% · HIGH ≥80% · MEDIUM ≥60%
 └──────────────┬─────────────────────┘
                │  Prisma ORM
                ▼
 ┌────────────────────────────┐      ┌──────────────────────────┐
 │  Neon Postgres (serverless)│◄─────│  immunefi-scraper        │
-│  conexión pool @prisma/pg  │      │  sync diaria 8am UTC     │
+│  pooled connection @prisma/pg│    │  daily sync 8am UTC      │
 └──────────────┬─────────────┘      └──────────────────────────┘
                │  SSR, revalidate=0
                ▼
 ┌────────────────────────────┐      ┌──────────────────────────┐
-│  Next.js 16 Dashboard      │      │  Alertas Telegram        │
-│  (Vercel, auto-refresh 60s)│      │  en CRITICAL / HIGH      │
+│  Next.js 16 Dashboard      │      │  Telegram alerts          │
+│  (Vercel, auto-refresh 60s)│      │  on CRITICAL / HIGH      │
 └────────────────────────────┘      └──────────────────────────┘
 ```
 
-**Todo es serverless**: Trigger.dev para tareas programadas, Neon para base de datos, Vercel para el frontend. No hay infraestructura persistente que mantener tras el despliegue.
+**Everything is serverless**: Trigger.dev for scheduled tasks, Neon for the database, Vercel for the frontend. No persistent infrastructure to maintain after deployment.
 
 ---
 
-## Modelo de datos
+## Data model
 
-| Modelo | Propósito |
+| Model | Purpose |
 |--------|-----------|
-| **SmartContract** | Contratos monitorizados (address + chain único) |
-| **Anomaly** | Transacciones anómalas detectadas (tx hash único, blockNumber, metadata JSON) |
-| **BountyProgram** | Programas de bug bounty (Immunefi, etc.) — unique (platform, protocol) |
-| **Opportunity** | Hallazgos/oportunidades específicas dentro de un programa |
-| **Vulnerability** | Vulnerabilidades identificadas (CVE, SWC ID, severity) |
+| **SmartContract** | Monitored contracts (unique address + chain) |
+| **Anomaly** | Detected anomalous transactions (unique tx hash, blockNumber, JSON metadata) |
+| **BountyProgram** | Bug bounty programs (Immunefi, etc.) — unique (platform, protocol) |
+| **Opportunity** | Specific findings/opportunities within a program |
+| **Vulnerability** | Identified vulnerabilities (CVE, SWC ID, severity) |
 
-Índices optimizados para: `severity`, `blockNumber`, `detectedAt`, `transactionHash` (único), `smartContractId`, `chain`.
+Indexes optimized for: `severity`, `blockNumber`, `detectedAt`, `transactionHash` (unique), `smartContractId`, `chain`.
 
 ---
 
-## Metodología de detección
+## Detection methodology
 
-### Definición de la señal
+### Signal definition
 
-Una transacción se marca como anómala cuando:
+A transaction is flagged as anomalous when:
 
 ```
 status == 0 (revert)  AND  gasUsed / gasLimit >= 0.60
 ```
 
-### Racional
+### Rationale
 
-Los exploits fallidos típicamente queman la mayor parte de su gas antes de revertir: la lógica de cambio de estado se ejecuta hasta que un guard salta, una llamada interna agota el bucle, o el contrato objetivo rechaza la llamada. Un ratio alto de gas quemado en revert es un proxy barato y de alto recall para "algo adversarial se intentó aquí".
+Failed exploits typically burn most of their gas before reverting: state-changing logic executes until a guard trips, an internal call exhausts a loop, or the target contract rejects the call. A high gas-burned-on-revert ratio is a cheap, high-recall proxy for "something adversarial was attempted here."
 
-### Modelo de severidad
+### Severity model
 
-| Severidad | Gas quemado | Significado operacional |
+| Severity | Gas burned | Operational meaning |
 |-----------|-------------|------------------------|
-| **CRITICAL** | ≥ 95% | Alerta inmediata (Telegram) — probable exploit activo |
-| **HIGH** | ≥ 80% | Alerta inmediata (Telegram) — comportamiento muy sospechoso |
-| **MEDIUM** | ≥ 60% | Cola en dashboard para revisión manual |
+| **CRITICAL** | ≥ 95% | Immediate alert (Telegram) — likely active exploit |
+| **HIGH** | ≥ 80% | Immediate alert (Telegram) — highly suspicious behavior |
+| **MEDIUM** | ≥ 60% | Queued on dashboard for manual review |
 
-### Limitaciones conocidas
+### Known limitations
 
-La señal es **high-recall, no high-precision**: errores benignos de usuario (calldata mal configurado, reverts por slippage) también queman gas. El pipeline es un *front-end de triaje*; cada flag requiere revisión manual del contrato antes de clasificación. Reducción de falsos positivos (clustering de calldata, reputación de contratos) está en el roadmap.
+The signal is **high-recall, not high-precision**: benign user errors (misconfigured calldata, slippage reverts) also burn gas. The pipeline is a *triage front-end*; every flag requires manual contract review before classification. False-positive reduction (calldata clustering, contract reputation) is on the roadmap.
 
 ---
 
-## Estructura del repositorio
+## Repository structure
 
 ```
 prisma/
-  schema.prisma              # Modelos: Anomaly · SmartContract · BountyProgram · Opportunity · Vulnerability
-  migrations/                # Migraciones SQL versionadas
-  config.ts                  # Config Prisma + dotenv
+  schema.prisma              # Models: Anomaly · SmartContract · BountyProgram · Opportunity · Vulnerability
+  migrations/                # Versioned SQL migrations
+  config.ts                  # Prisma config + dotenv
 
 src/
   app/
-    page.tsx                 # Dashboard SSR (stats, anomalies, bounties)
-    anomaly/[id]/page.tsx    # Vista forense de anomalía individual
-    globals.css              # Tema HUD (grid, scanlines, glow, fonts)
+    page.tsx                 # SSR dashboard (stats, anomalies, bounties)
+    anomaly/[id]/page.tsx    # Single-anomaly forensic view
+    globals.css              # HUD theme (grid, scanlines, glow, fonts)
     layout.tsx               # Metadata, fonts (Orbitron + JetBrains Mono)
   components/
-    MatrixRain.tsx           # Fondo animado canvas
-    Sparkline.tsx            # Gráfico SVG actividad 7 días
-    LiveClock.tsx            # Reloj UTC en header
-    LocalTime.tsx            # Formato fecha local para timestamps
-    CountUp.tsx              # Animación contadores
-    AutoRefresh.tsx          # Router.refresh() cada 60s
-    GlitchTitle.tsx          # Título con efecto glitch CSS
+    MatrixRain.tsx           # Animated canvas background
+    Sparkline.tsx            # 7-day activity SVG chart
+    LiveClock.tsx             # UTC clock in header
+    LocalTime.tsx             # Local date formatting for timestamps
+    CountUp.tsx               # Counter animation
+    AutoRefresh.tsx           # Router.refresh() every 60s
+    GlitchTitle.tsx           # Title with CSS glitch effect
   lib/
-    prisma.ts                # Singleton PrismaClient + adapter-pg
-    metadata-utils.ts        # Normalización gas percentage desde JSON
+    prisma.ts                # PrismaClient singleton + adapter-pg
+    metadata-utils.ts        # Gas percentage normalization from JSON
   trigger/
-    etherscan-monitor.ts     # Tarea horaria: escaneo 50 bloques, detección anomalías
-    immunefi-scraper.ts      # Tarea diaria: sync programas Immunefi
-    example.ts               # Task de ejemplo Trigger.dev
+    etherscan-monitor.ts     # Hourly task: 50-block scan, anomaly detection
+    immunefi-scraper.ts      # Daily task: Immunefi program sync
+    example.ts               # Trigger.dev example task
 
-trigger.config.ts            # Config proyecto Trigger.dev
-next.config.ts               # Config Next.js (mínima)
+trigger.config.ts            # Trigger.dev project config
+next.config.ts               # Next.js config (minimal)
 tsconfig.json                # TypeScript strict, path aliases @/*
 eslint.config.mjs            # ESLint 9 + next/core-web-vitals + typescript
 ```
 
 ---
 
-## Despliegue rápido
+## Quick deploy
 
-### Prerrequisitos
+### Prerequisites
 
 - Node.js 20+
-- Cuenta en [Neon](https://neon.tech) (Postgres serverless)
-- Cuenta en [Trigger.dev](https://trigger.dev) (tareas programadas)
-- API key de [Alchemy](https://alchemy.com) (RPC Ethereum)
-- Bot de Telegram + Chat ID (para alertas)
+- [Neon](https://neon.tech) account (serverless Postgres)
+- [Trigger.dev](https://trigger.dev) account (scheduled tasks)
+- [Alchemy](https://alchemy.com) API key (Ethereum RPC)
+- Telegram bot + Chat ID (for alerts)
 
-### Variables de entorno
+### Environment variables
 
 ```bash
 cp .env.example .env
@@ -156,93 +156,93 @@ TELEGRAM_BOT_TOKEN="123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxx"
 TELEGRAM_CHAT_ID="123456789"
 ```
 
-### Desarrollo local
+### Local development
 
 ```bash
-# 1. Instalar dependencias
+# 1. Install dependencies
 npm install
 
-# 2. Generar cliente Prisma + aplicar migraciones
+# 2. Generate Prisma client + apply migrations
 npx prisma migrate deploy
 
-# 3. Dashboard en http://localhost:3000
+# 3. Dashboard at http://localhost:3000
 npm run dev
 
-# 4. En otra terminal: runner local Trigger.dev
+# 4. In another terminal: local Trigger.dev runner
 npx trigger.dev@latest dev
 ```
 
-### Despliegue producción
+### Production deployment
 
-| Componente | Plataforma | Comando |
+| Component | Platform | Command |
 |------------|------------|---------|
-| Dashboard | Vercel | `vercel --prod` (conecta repo) |
-| Tareas | Trigger.dev Cloud | `npx trigger.dev@latest deploy` |
-| Base de datos | Neon | Automático via `DATABASE_URL` |
+| Dashboard | Vercel | `vercel --prod` (connects repo) |
+| Tasks | Trigger.dev Cloud | `npx trigger.dev@latest deploy` |
+| Database | Neon | Automatic via `DATABASE_URL` |
 
-**Variables en producción**: Configura las mismas 5 variables en Vercel (Project Settings → Environment Variables) y Trigger.dev (Dashboard → Environment Variables).
+**Production variables**: Configure the same 5 variables in Vercel (Project Settings → Environment Variables) and Trigger.dev (Dashboard → Environment Variables).
 
 ---
 
-## Scripts disponibles
+## Available scripts
 
 ```bash
 npm run dev        # Next.js dev server (Turbopack)
-npm run build      # Build producción + typecheck
-npm run start      # Servidor producción
+npm run build      # Production build + typecheck
+npm run start      # Production server
 npm run lint       # ESLint
 npm run test       # Vitest (unit tests)
-npm run test:ui    # Vitest UI interactivo
-npm run postinstall # prisma generate (auto en install)
+npm run test:ui    # Interactive Vitest UI
+npm run postinstall # prisma generate (auto on install)
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] **Reducción falsos positivos**: clustering de calldata por contrato
-- [ ] **Workflow de triaje**: acknowledge / resolve / anotar anomalías
-- [ ] **Análisis histórico por contrato**: patrones temporales, repeat offenders
-- [ ] **API pública read-only**: endpoints para investigadores externos
+- [ ] **False-positive reduction**: per-contract calldata clustering
+- [ ] **Triage workflow**: acknowledge / resolve / annotate anomalies
+- [ ] **Per-contract historical analysis**: temporal patterns, repeat offenders
+- [ ] **Public read-only API**: endpoints for external researchers
 - [ ] **Multi-chain**: Polygon, Arbitrum, Optimism, Base
-- [ ] **Enriquecimiento**: decodificar calldata con ABI, etiquetas de contratos conocidos
+- [ ] **Enrichment**: decode calldata with ABI, known contract labels
 
 ---
 
-## Decisiones técnicas clave
+## Key technical decisions
 
-| Decisión | Razón |
+| Decision | Reason |
 |----------|-------|
-| `@prisma/adapter-pg` + Neon | Pooling nativo serverless, sin connection limits |
-| Trigger.dev vs cron jobs | Reintentos, observabilidad, idempotencia, maxDuration |
-| Viem vs ethers v6 | Bundle size menor, tree-shaking, TypeScript-first |
-| Next.js App Router + SSR | Datos siempre frescos (`revalidate=0`), SEO-friendly |
-| Tailwind CSS v4 | Zero-config, CSS-first, bundle size mínimo |
-| `transactionHash` unique constraint | Deduplicación a nivel DB, race-condition proof |
+| `@prisma/adapter-pg` + Neon | Native serverless pooling, no connection limits |
+| Trigger.dev vs cron jobs | Retries, observability, idempotency, maxDuration |
+| Viem vs ethers v6 | Smaller bundle size, tree-shaking, TypeScript-first |
+| Next.js App Router + SSR | Always-fresh data (`revalidate=0`), SEO-friendly |
+| Tailwind CSS v4 | Zero-config, CSS-first, minimal bundle size |
+| `transactionHash` unique constraint | DB-level deduplication, race-condition proof |
 
 ---
 
-## Licencia
+## License
 
-MIT — úsalo, modifícalo, despliégalo. Ver [LICENSE](LICENSE).
-
----
-
-## Autor
-
-Construido y operado por **jeloercc** como infraestructura independiente de investigación de seguridad Web3.
-
-> **⚠️ Disclaimer**: El dashboard es una herramienta de triaje, **no** asesoramiento financiero ni de seguridad. Cada anomalía requiere verificación manual antes de actuar.
+MIT — use it, modify it, deploy it. See [LICENSE](LICENSE).
 
 ---
 
-## Contribuir
+## Author
+
+Built and operated by **jeloercc** as independent Web3 security research infrastructure.
+
+> **⚠️ Disclaimer**: The dashboard is a triage tool, **not** financial or security advice. Every anomaly requires manual verification before acting on it.
+
+---
+
+## Contributing
 
 1. Fork → branch → PR
-2. `npm run lint && npm run test && npm run build` deben pasar
-3. Commits convencionales (`feat:`, `fix:`, `chore:`, etc.)
-4. Tests para nueva lógica de detección / utilidades
+2. `npm run lint && npm run test && npm run build` must pass
+3. Conventional commits (`feat:`, `fix:`, `chore:`, etc.)
+4. Tests for new detection logic / utilities
 
 ---
 
-*¿Preguntas? Abre un issue o revisa la [documentación de Trigger.dev](https://trigger.dev/docs) y [Prisma](https://pris.ly/d).*
+*Questions? Open an issue or check the [Trigger.dev docs](https://trigger.dev/docs) and [Prisma docs](https://pris.ly/d).*
