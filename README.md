@@ -209,6 +209,7 @@ npm run postinstall # prisma generate (auto on install)
 - [ ] **Enrichment**: decode calldata with ABI, known contract labels
 
 ---
+![Uploading Screenshot 2026-08-22 at 12.01.13 PM.png…]()
 
 ## Key technical decisions
 
